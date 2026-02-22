@@ -1,0 +1,106 @@
+SQL2_INDEX_VIEW_PROC_ETL
+Performance Optimization Notes
+--------------------------------
+
+Objective:
+Improve reporting performance when student count grows
+by introducing indexing and reusable SQL objects.
+
+
+1. Slow Query Identified
+------------------------
+
+Query Used in Reporting:
+
+SELECT d.department_name,
+       COUNT(s.student_id)
+FROM Students s
+JOIN Departments d
+ON s.department_id = d.department_id
+GROUP BY d.department_name;
+
+Issue Observed:
+When the Students table grows large, the query performs
+a full table scan and JOIN cost increases.
+This slows down department-level reports.
+
+
+Index Created:
+
+CREATE NONCLUSTERED INDEX idx_students_department
+ON Students(department_id);
+
+Reason:
+This index supports JOIN between Students and Departments
+because department_id is used in the ON condition.
+
+Result After Index:
+Query execution becomes faster due to index seek instead
+of scanning entire Students table.
+
+
+
+2. Stored Procedure Performance
+-------------------------------
+
+Stored Procedure Tested:
+
+EXEC sp_GetTopStudentsByBatch 2023, 75;
+
+Underlying Query:
+
+SELECT student_id, name, batch, marks
+FROM Students
+WHERE batch = @BatchId
+AND marks >= @MinMarks
+ORDER BY marks DESC;
+
+Issue Observed:
+Filtering by batch and marks caused table scan
+when record count increases.
+
+Indexes Created:
+
+CREATE NONCLUSTERED INDEX idx_students_batch
+ON Students(batch);
+
+CREATE NONCLUSTERED INDEX idx_students_marks
+ON Students(marks);
+
+Reason:
+- idx_students_batch helps filtering by batch.
+- idx_students_marks helps filtering and sorting by marks.
+
+Result After Index:
+Improved filtering speed.
+Reduced scan cost.
+Better performance for batch-based student ranking.
+
+
+3. Analytics Layer Improvement
+------------------------------
+
+View Created:
+vw_StudentPerformance
+
+Purpose:
+Combine Students + Departments + Courses
+into a single reusable reporting layer.
+
+Benefit:
+Reporting queries now use a structured view
+instead of writing complex joins repeatedly.
+Improves reusability and maintainability.
+
+
+4. Overall Impact
+-----------------
+
+- Reduced full table scans.
+- Faster reporting queries.
+- Improved stored procedure performance.
+- Better scalability as student data grows.
+
+Conclusion:
+Indexing and reusable SQL objects significantly improve
+report performance and system scalability.
