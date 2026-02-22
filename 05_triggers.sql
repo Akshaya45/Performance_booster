@@ -23,3 +23,9 @@ BEGIN
     WHERE d.marks <> i.marks;
 END;
 
+UPDATE Students
+SET Marks = 90
+WHERE StudentId = 5;
+
+SELECT * FROM MarksAudit;
+
